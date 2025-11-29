@@ -6,7 +6,7 @@ pipeline {
         choice (
             name: 'TF_ACTION',
             choices :['plan','apply', 'destroy'],
-            descrption: 'Select which Terraform action to run'
+            description: 'Select which Terraform action to run'
         )
     }
     
