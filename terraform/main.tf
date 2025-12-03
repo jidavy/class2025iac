@@ -181,7 +181,7 @@ resource "aws_security_group" "java_sg" {
 # Java EC2 Instance (Node 3)
 # -------------------------
 resource "aws_instance" "java_node" {
-  ami                    = "ami-JAVA-AMI-ID-HERE"  # Replace with your Java AMI from Packer
+  ami                    = "ami-08b6a2983df6e9e25"  # Replace with your Java AMI from Packer
   instance_type          = "t2.micro"
   subnet_id              = "subnet-02f408ff476473c54"
   vpc_security_group_ids = [aws_security_group.java_sg.id]
