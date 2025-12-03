@@ -147,7 +147,7 @@ resource "aws_instance" "python-node" {
 resource "aws_security_group" "java_sg" {
   name        = "java-sg"
   description = "Allow SSH and Port 9090 inbound, all outbound"
-  vpc_id      = "vpc-0a1624f291bfb283f"
+  vpc_id      = "vpc-0b8343f60d0d8ca1f"
 
   ingress {
     description = "SSH"
@@ -183,9 +183,9 @@ resource "aws_security_group" "java_sg" {
 resource "aws_instance" "java_node" {
   ami                    = "ami-JAVA-AMI-ID-HERE"  # Replace with your Java AMI from Packer
   instance_type          = "t2.micro"
-  subnet_id              = "subnet-060ba13bd6800a0db"
+  subnet_id              = "subnet-02f408ff476473c54"
   vpc_security_group_ids = [aws_security_group.java_sg.id]
-  key_name               = "MasterClass2025"
+  key_name               = "masterclass2025"
 
   tags = {
     Name = "java-node"
