@@ -16,9 +16,9 @@ packer {
 
 source "amazon-ebs" "nginx-git" {
     region = "eu-west-1"
-    instance_type = "t3.micro"
+    instance_type = "t2.micro"
     ssh_username = "ec2-user"
-    source_ami  = "ami-0870af38096a5355b"
+    source_ami  = "ami-08b6a2983df6e9e25"
     ami_name = "nginx-git-by-packer-v2"
     ami_virtualization_type  = "hvm"
 }
@@ -30,13 +30,25 @@ source "amazon-ebs" "nginx-git" {
 
 source "amazon-ebs" "java-git" {
     region = "eu-west-1"
-    instance_type = "t3.micro"
+    instance_type = "t2.micro"
     ssh_username = "ec2-user"
-    source_ami  = "ami-0870af38096a5355b"
+    source_ami  = "ami-08b6a2983df6e9e25"
     ami_name = "java-git-by-packer-v2"
     ami_virtualization_type  = "hvm"
 }
 
+#----------------------------------
+# source: how we build the AMI for pthon3 and git
+#-----------------------------------
+
+source "amazon-ebs" "python-git" {
+    region = "eu-west-1"
+    instance_type = "t2.micro"
+    ssh_username = "ec2-user"
+    source_ami  = "ami-08b6a2983df6e9e25"
+    ami_name = "python-git-by-packer-v2"
+    ami_virtualization_type  = "hvm"
+}
 
 #------------------------------------
 # build: source + provisioning to do 
@@ -85,5 +97,24 @@ build  {
 
 }
 
+build  {
+    name  = "python-git-ami-build"
+    sources = [
+        "source.amazon-ebs.python-git"
+    ]
+
+    provisioner "shell" {
+        inline = [
+            "sudo yum update -y",
+            "sudo yum install python3 python3-pip -y",
+            "sudo yum install git -y"
+        ]
+    }
+
+    post-processor "shell-local" {
+        inline = ["echo 'AMI build is finished For python' "]
+    }
+
+}
 
 
