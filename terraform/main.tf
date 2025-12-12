@@ -63,7 +63,7 @@ resource "aws_security_group" "nginx_sg" {
 # Nginx EC2 Instance (Node 1)
 # -------------------------
 resource "aws_instance" "nginx_node" {
-  ami                    = "ami-0d66888494d0c04fb"  # TODO: Replace with your NGINX AMI from Packer
+  ami                    = "ami-0d66888494d0c04fb" # TODO: Replace with your NGINX AMI from Packer
   instance_type          = "t2.micro"
   subnet_id              = "subnet-02f408ff476473c54"
   vpc_security_group_ids = [aws_security_group.nginx_sg.id]
@@ -123,7 +123,7 @@ resource "aws_security_group" "python_sg" {
 # Python EC2 Instance (Node 2)
 # -------------------------
 resource "aws_instance" "python_node" {
-  ami                    = "ami-0d93f6ccac1efd18a"  # TODO: Replace with your Java/Python AMI from Packer
+  ami                    = "ami-0d93f6ccac1efd18a" # TODO: Replace with your Java/Python AMI from Packer
   instance_type          = "t2.micro"
   subnet_id              = "subnet-02f408ff476473c54"
   vpc_security_group_ids = [aws_security_group.python_sg.id]
@@ -184,7 +184,7 @@ resource "aws_security_group" "java_sg" {
 # Java EC2 Instance (Node 3)
 # -------------------------
 resource "aws_instance" "java_node" {
-  ami                    = "ami-085e1e15a87b25f4c"  # TODO: Replace with your Java/Python AMI from Packer (same as Python node)
+  ami                    = "ami-085e1e15a87b25f4c" # TODO: Replace with your Java/Python AMI from Packer (same as Python node)
   instance_type          = "t2.micro"
   subnet_id              = "subnet-02f408ff476473c54"
   vpc_security_group_ids = [aws_security_group.java_sg.id]
@@ -223,7 +223,7 @@ output "java_node_ip" {
 # Additional helpful output
 output "access_instructions" {
   description = "How to access your services"
-  value = <<-EOT
+  value       = <<-EOT
   
   === Access Instructions ===
   NGINX:  http://${aws_instance.nginx_node.public_ip}
