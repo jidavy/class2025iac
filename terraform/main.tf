@@ -1,10 +1,7 @@
 terraform {
-  backend "s3" {
-    bucket  = "techbleat-cicd-state-bucket"
-    key     = "envs/dev/terraform.tfstate"
-    region  = "eu-west-1"
-    encrypt = true
-  }
+  backend "local" {
+     path = "/tmp/terraform/terraform.tfstate"
+   }
   
   required_version = ">= 1.6.0"
 
