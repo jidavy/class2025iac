@@ -13,10 +13,10 @@ packer {
 # SOURCE 1: NGINX + Git AMI
 #-----------------------------
 source "amazon-ebs" "nginx-git" {
-    region                  = "eu-west-1"
+    region                  = "us-east-1"
     instance_type           = "t3.micro"
     ssh_username            = "ec2-user"
-    source_ami              = "ami-0c38b837cd80f13bb"  # Amazon Linux 2023
+    source_ami              = "ami-068c0051b15cdb816"  # Amazon Linux 2023
     ami_name                = "nginx-git-ami-{{timestamp}}"
     ami_description         = "NGINX web server with Git"
     ami_virtualization_type = "hvm"
@@ -31,10 +31,10 @@ source "amazon-ebs" "nginx-git" {
 # SOURCE 2: Java + Python + Git AMI
 #-----------------------------
 source "amazon-ebs" "java-python-git" {
-    region                  = "eu-west-1"
+    region                  = "us-east-1"
     instance_type           = "t3.micro"
     ssh_username            = "ec2-user"
-    source_ami              = "ami-0c38b837cd80f13bb"  # Amazon Linux 2023
+    source_ami              = "ami-068c0051b15cdb816"  # Amazon Linux 2023
     ami_name                = "java-python-git-ami-{{timestamp}}"
     ami_description         = "Java 17 and Python 3 with Git"
     ami_virtualization_type = "hvm"
