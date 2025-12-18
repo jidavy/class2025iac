@@ -1,76 +1,117 @@
 pipeline {
-    agent any 
-
+    agent any
 
     parameters {
-        choice (
-            name: 'TF_ACTION',
-            choices :['plan','apply', 'destroy'],
-            description: 'Select which Terraform action to run'
+        choice(
+            name: 'PACKER_ACTION',
+            choices: ['validate', 'build', 'build-nginx-only', 'build-java-python-only'],
+            description: 'Select Packer action to perform'
         )
     }
-    
+
     environment {
-        
-        AWS_SECRET_ACCESS_KEY = credentials ('aws-secret-access-key')
-        AWS_ACCESS_KEY_ID = credentials ('aws-access-key-id')
-        AWS_DEFAULT_REGION = 'eu-west-1'
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+        AWS_DEFAULT_REGION    = 'eu-west-1'
     }
-    
+
     stages {
-        stage ('checkout') {
+        stage('Checkout') {
             steps {
                 checkout scm
-            }
-        }
-        stage ('terraform init') {
-            steps {
-                dir ('terraform') {
-                    sh ' terraform init -reconfigure'
-                }
+                echo "✅ Code checked out successfully"
             }
         }
 
-        stage ('terraform validate') {
+        stage('Verify Packer Installation') {
             steps {
-                dir ('terraform') {
-                    sh ' terraform validate'
-                }
+                sh '''
+                    echo "=== Checking Packer version ==="
+                    packer version
+                '''
             }
-        } 
-        
-        stage ('terraform plan') {
-            when  {
-                expression { params.TF_ACTION == 'plan'}
-            }
-            steps {
-                dir ('terraform') {
-                    sh ' terraform plan'
-                }
-            }
-        } 
+        }
 
-        stage ('terraform apply') {
-         when  {
-                expression { params.TF_ACTION == 'apply'}
-            }
+        stage('Packer Init') {
             steps {
-                dir ('terraform') {
-                    sh ' terraform apply -auto-approve'
+                dir('packer') {
+                    sh '''
+                        echo "=== Initializing Packer ==="
+                        packer init .
+                    '''
                 }
             }
-        } 
+        }
 
-        stage ('terraform destroy') {
-         when  {
-                expression { params.TF_ACTION == 'destroy'}
-            }
+        stage('Packer Validate') {
             steps {
-                dir ('terraform') {
-                    sh ' terraform destroy -auto-approve'
+                dir('packer') {
+                    sh '''
+                        echo "=== Validating Packer template ==="
+                        packer validate .
+                    '''
                 }
             }
-        } 
-    
+        }
+
+        stage('Packer Build - NGINX AMI') {
+            when {
+                anyOf {
+                    expression { params.PACKER_ACTION == 'build' }
+                    expression { params.PACKER_ACTION == 'build-nginx-only' }
+                }
+            }
+            steps {
+                dir('packer') {
+                    sh '''
+                        echo "=== Building NGINX + Git AMI ==="
+                        packer build -only='nginx-git-ami-build.*' .
+                    '''
+                }
+            }
+        }
+
+        stage('Packer Build - Java/Python AMI') {
+            when {
+                anyOf {
+                    expression { params.PACKER_ACTION == 'build' }
+                    expression { params.PACKER_ACTION == 'build-java-python-only' }
+                }
+            }
+            steps {
+                dir('packer') {
+                    sh '''
+                        echo "=== Building Java + Python + Git AMI ==="
+                        packer build -only='java-python-git-ami-build.*' .
+                    '''
+                }
+            }
+        }
+
+        stage('List Created AMIs') {
+            when {
+                expression { params.PACKER_ACTION == 'build' }
+            }
+            steps {
+                sh '''
+                    echo "=== Listing AMIs created in last 10 minutes ==="
+                    aws ec2 describe-images \
+                        --owners self \
+                        --filters "Name=creation-date,Values=$(date -u -d '10 minutes ago' '+%Y-%m-%dT%H:%M')*" \
+                        --query 'Images[*].[ImageId,Name,CreationDate]' \
+                        --output table
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Packer pipeline completed successfully!"
+            echo "Next step: Update dev.tfvars with new AMI IDs"
+        }
+        failure {
+            echo "❌ Packer pipeline failed. Check logs above."
+        }
     }
 }
