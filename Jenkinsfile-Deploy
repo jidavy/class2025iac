@@ -17,7 +17,7 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        AWS_DEFAULT_REGION = 'eu-west-1'  // FIXED: Changed from us-east-1
+        AWS_DEFAULT_REGION = 'us-east-1'  // YOUR REGION - KEEPING IT
     }
     
     stages {
@@ -145,48 +145,3 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ec2-user@${env.JAVA_IP} '
                             chmod +x /tmp/install-java.sh
                             /tmp/install-java.sh
-                        '
-                        
-                        echo "✅ Java deployment completed!"
-                    """
-                }
-            }
-        }
-        
-        stage('Verify Deployments') {
-            steps {
-                script {
-                    echo "=== Verifying Deployments ==="
-                    
-                    if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'web-only') {
-                        sh "curl -f http://${env.WEB_IP} || echo '⚠️  Web verification failed'"
-                    }
-                    if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'python-only') {
-                        sh "curl -f http://${env.PYTHON_IP}:8080 || echo '⚠️  Python verification failed'"
-                    }
-                    if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'java-only') {
-                        sh "curl -f http://${env.JAVA_IP}:9090 || echo '⚠️  Java verification failed'"
-                    }
-                }
-            }
-        }
-    }
-    
-    post {
-        success {
-            echo """
-            ✅✅✅ Deployment Pipeline Completed Successfully! ✅✅✅
-            
-            Access your applications at:
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            🌐 Web Application:    http://${env.WEB_IP}
-            🐍 Python Application: http://${env.PYTHON_IP}:8080
-            ☕ Java Application:   http://${env.JAVA_IP}:9090
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            """
-        }
-        failure {
-            echo "❌ Deployment pipeline failed. Check logs above for details."
-        }
-    }
-}
