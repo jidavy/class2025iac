@@ -17,25 +17,24 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        AWS_DEFAULT_REGION = 'us-east-1'  // YOUR REGION - KEEPING IT
+        AWS_DEFAULT_REGION = 'us-east-1'
     }
     
     stages {
         stage('Checkout Code') {
             steps {
                 checkout scm
-                echo "✅ Code checked out successfully"
+                echo "Code checked out successfully"
             }
         }
         
-        // NEW STAGE - This fixes the terraform init error
         stage('Initialize Terraform') {
             steps {
                 dir('terraform') {
                     sh '''
-                        echo "=== Initializing Terraform Backend ==="
+                        echo "Initializing Terraform Backend"
                         terraform init -reconfigure
-                        echo "✅ Terraform initialized successfully"
+                        echo "Terraform initialized successfully"
                     '''
                 }
             }
@@ -45,7 +44,6 @@ pipeline {
             steps {
                 script {
                     dir('terraform') {
-                        // Get IPs from Terraform outputs
                         env.WEB_IP = sh(
                             script: "terraform output -raw web_node_public_ip",
                             returnStdout: true
@@ -61,12 +59,10 @@ pipeline {
                             returnStdout: true
                         ).trim()
                         
-                        echo "================================================"
-                        echo "Infrastructure IPs Retrieved:"
+                        echo "Infrastructure IPs Retrieved"
                         echo "Web Node IP: ${env.WEB_IP}"
                         echo "Python Node IP: ${env.PYTHON_IP}"
                         echo "Java Node IP: ${env.JAVA_IP}"
-                        echo "================================================"
                     }
                 }
             }
@@ -82,18 +78,10 @@ pipeline {
             steps {
                 sshagent(credentials: ['AWS-SSH-KEY']) {
                     sh """
-                        echo "=== Deploying to Web Node: ${env.WEB_IP} ==="
-                        
-                        # Copy deployment script to remote server
+                        echo "Deploying to Web Node: ${env.WEB_IP}"
                         scp -o StrictHostKeyChecking=no scripts/install-web.sh ec2-user@${env.WEB_IP}:/tmp/
-                        
-                        # Execute deployment script remotely
-                        ssh -o StrictHostKeyChecking=no ec2-user@${env.WEB_IP} '
-                            chmod +x /tmp/install-web.sh
-                            /tmp/install-web.sh
-                        '
-                        
-                        echo "✅ Web deployment completed!"
+                        ssh -o StrictHostKeyChecking=no ec2-user@${env.WEB_IP} 'chmod +x /tmp/install-web.sh && /tmp/install-web.sh'
+                        echo "Web deployment completed"
                     """
                 }
             }
@@ -109,18 +97,10 @@ pipeline {
             steps {
                 sshagent(credentials: ['AWS-SSH-KEY']) {
                     sh """
-                        echo "=== Deploying to Python Node: ${env.PYTHON_IP} ==="
-                        
-                        # Copy deployment script
+                        echo "Deploying to Python Node: ${env.PYTHON_IP}"
                         scp -o StrictHostKeyChecking=no scripts/install-python.sh ec2-user@${env.PYTHON_IP}:/tmp/
-                        
-                        # Execute deployment
-                        ssh -o StrictHostKeyChecking=no ec2-user@${env.PYTHON_IP} '
-                            chmod +x /tmp/install-python.sh
-                            /tmp/install-python.sh
-                        '
-                        
-                        echo "✅ Python deployment completed!"
+                        ssh -o StrictHostKeyChecking=no ec2-user@${env.PYTHON_IP} 'chmod +x /tmp/install-python.sh && /tmp/install-python.sh'
+                        echo "Python deployment completed"
                     """
                 }
             }
@@ -136,12 +116,42 @@ pipeline {
             steps {
                 sshagent(credentials: ['AWS-SSH-KEY']) {
                     sh """
-                        echo "=== Deploying to Java Node: ${env.JAVA_IP} ==="
-                        
-                        # Copy deployment script
+                        echo "Deploying to Java Node: ${env.JAVA_IP}"
                         scp -o StrictHostKeyChecking=no scripts/install-java.sh ec2-user@${env.JAVA_IP}:/tmp/
-                        
-                        # Execute deployment
-                        ssh -o StrictHostKeyChecking=no ec2-user@${env.JAVA_IP} '
-                            chmod +x /tmp/install-java.sh
-                            /tmp/install-java.sh
+                        ssh -o StrictHostKeyChecking=no ec2-user@${env.JAVA_IP} 'chmod +x /tmp/install-java.sh && /tmp/install-java.sh'
+                        echo "Java deployment completed"
+                    """
+                }
+            }
+        }
+        
+        stage('Verify Deployments') {
+            steps {
+                script {
+                    echo "Verifying Deployments"
+                    if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'web-only') {
+                        sh "curl -f http://${env.WEB_IP} || echo 'Web verification failed'"
+                    }
+                    if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'python-only') {
+                        sh "curl -f http://${env.PYTHON_IP}:8080 || echo 'Python verification failed'"
+                    }
+                    if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'java-only') {
+                        sh "curl -f http://${env.JAVA_IP}:9090 || echo 'Java verification failed'"
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Deployment Pipeline Completed Successfully"
+            echo "Web: http://${env.WEB_IP}"
+            echo "Python: http://${env.PYTHON_IP}:8080"
+            echo "Java: http://${env.JAVA_IP}:9090"
+        }
+        failure {
+            echo "Deployment pipeline failed - check logs above"
+        }
+    }
+}
