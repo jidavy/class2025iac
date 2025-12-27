@@ -17,7 +17,7 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_DEFAULT_REGION = 'eu-west-1'  // FIXED: Changed from us-east-1
     }
     
     stages {
@@ -25,6 +25,19 @@ pipeline {
             steps {
                 checkout scm
                 echo "✅ Code checked out successfully"
+            }
+        }
+        
+        // NEW STAGE - This fixes the terraform init error
+        stage('Initialize Terraform') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        echo "=== Initializing Terraform Backend ==="
+                        terraform init -reconfigure
+                        echo "✅ Terraform initialized successfully"
+                    '''
+                }
             }
         }
         
@@ -48,9 +61,12 @@ pipeline {
                             returnStdout: true
                         ).trim()
                         
+                        echo "================================================"
+                        echo "Infrastructure IPs Retrieved:"
                         echo "Web Node IP: ${env.WEB_IP}"
                         echo "Python Node IP: ${env.PYTHON_IP}"
                         echo "Java Node IP: ${env.JAVA_IP}"
+                        echo "================================================"
                     }
                 }
             }
@@ -140,14 +156,16 @@ pipeline {
         stage('Verify Deployments') {
             steps {
                 script {
+                    echo "=== Verifying Deployments ==="
+                    
                     if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'web-only') {
-                        sh "curl -f http://${env.WEB_IP} || echo 'Web verification failed'"
+                        sh "curl -f http://${env.WEB_IP} || echo '⚠️  Web verification failed'"
                     }
                     if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'python-only') {
-                        sh "curl -f http://${env.PYTHON_IP}:8080 || echo 'Python verification failed'"
+                        sh "curl -f http://${env.PYTHON_IP}:8080 || echo '⚠️  Python verification failed'"
                     }
                     if (params.DEPLOYMENT_TARGET == 'all' || params.DEPLOYMENT_TARGET == 'java-only') {
-                        sh "curl -f http://${env.JAVA_IP}:9090 || echo 'Java verification failed'"
+                        sh "curl -f http://${env.JAVA_IP}:9090 || echo '⚠️  Java verification failed'"
                     }
                 }
             }
@@ -157,16 +175,18 @@ pipeline {
     post {
         success {
             echo """
-            ✅ Deployment Pipeline Completed Successfully!
+            ✅✅✅ Deployment Pipeline Completed Successfully! ✅✅✅
             
-            Access your applications:
-            - Web: http://${env.WEB_IP}
-            - Python: http://${env.PYTHON_IP}:8080
-            - Java: http://${env.JAVA_IP}:9090
+            Access your applications at:
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            🌐 Web Application:    http://${env.WEB_IP}
+            🐍 Python Application: http://${env.PYTHON_IP}:8080
+            ☕ Java Application:   http://${env.JAVA_IP}:9090
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             """
         }
         failure {
-            echo "❌ Deployment pipeline failed. Check logs above."
+            echo "❌ Deployment pipeline failed. Check logs above for details."
         }
     }
 }
