@@ -51,7 +51,7 @@ data "aws_ami" "java_latest" {
 resource "aws_security_group" "web_sg" {
   name        = "web-sg"
   description = "Allow SSH and Port 80 inbound"
-  vpc_id      = var.project_vpc 
+  vpc_id      = var.project_vpc
 
   ingress {
     description = "SSH"
