@@ -1,76 +1,72 @@
 pipeline {
     agent any 
 
-
     parameters {
         choice (
             name: 'TF_ACTION',
-            choices :['plan','apply', 'destroy'],
+            choices: ['plan', 'apply', 'destroy'],
             description: 'Select which Terraform action to run'
         )
     }
     
     environment {
-        
-        AWS_SECRET_ACCESS_KEY = credentials ('aws-secret-access-key')
-        AWS_ACCESS_KEY_ID = credentials ('aws-access-key-id')
-        AWS_DEFAULT_REGION = 'eu-west-1'
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+        AWS_DEFAULT_REGION    = 'eu-west-1'
+        TF_IN_AUTOMATION      = '1' // Tells Terraform it's running in a CI tool
     }
     
     stages {
-        stage ('checkout') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        stage ('terraform init') {
+
+        stage('Terraform Init') {
             steps {
-                dir ('terraform') {
-                    sh ' terraform init -reconfigure'
+                dir('terraform') {
+                    sh 'terraform init -reconfigure'
                 }
             }
         }
 
-        stage ('terraform validate') {
+        stage('Terraform Validate & Format') {
             steps {
-                dir ('terraform') {
-                    sh ' terraform validate'
+                dir('terraform') {
+                    sh 'terraform validate'
+                    sh 'terraform fmt -check'
                 }
             }
-        } 
+        }
         
-        stage ('terraform plan') {
-            when  {
-                expression { params.TF_ACTION == 'plan'}
-            }
+        stage('Terraform Plan') {
+            when { expression { params.TF_ACTION == 'plan' || params.TF_ACTION == 'apply' } }
             steps {
-                dir ('terraform') {
-                    sh ' terraform plan -var-file="dev.tfvars"'
+                dir('terraform') {
+                    // We save the plan to a file called 'out.tfplan'
+                    sh 'terraform plan -var-file="dev.tfvars" -out=out.tfplan'
                 }
             }
         } 
 
-        stage ('terraform apply') {
-         when  {
-                expression { params.TF_ACTION == 'apply'}
-            }
+        stage('Terraform Apply') {
+            when { expression { params.TF_ACTION == 'apply' } }
             steps {
-                dir ('terraform') {
-                    sh ' terraform apply -var-file="dev.tfvars" -auto-approve'
+                dir('terraform') {
+                    // We apply the EXACT plan we just generated
+                    sh 'terraform apply "out.tfplan"'
                 }
             }
         } 
 
-        stage ('terraform destroy') {
-         when  {
-                expression { params.TF_ACTION == 'destroy'}
-            }
+        stage('Terraform Destroy') {
+            when { expression { params.TF_ACTION == 'destroy' } }
             steps {
-                dir ('terraform') {
-                    sh ' terraform destroy -var-file="dev.tfvars"  -auto-approve'
+                dir('terraform') {
+                    sh 'terraform destroy -var-file="dev.tfvars" -auto-approve'
                 }
             }
-        } 
-    
+        }
     }
 }
