@@ -1,6 +1,6 @@
-project_vpc           = "vpc-0a1624f291bfb283f"
+project_vpc           = "vpc-0d5a471e146d2d21b"
 project_instance_type = "t3.micro"
-project_subnet        = "subnet-060ba13bd6800a0db"
+project_subnet        = "subnet-011ebba8aba347739"
 # Ensure this matches the name in the AWS 'Key Pairs' dashboard!
 project_keyname = "jenkins-keys"
 
