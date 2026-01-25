@@ -3,87 +3,73 @@ packer {
 
     required_plugins {
         amazon = {
-            source = "github.com/hashicorp/amazon"
+            source  = "github.com/hashicorp/amazon"
             version = ">= 1.2.0"
         }
     }
 }
 
+# Variable to create a unique name for every build
+variable "timestamp" {
+    type    = string
+    default = "{{timestamp}}"
+}
 
 #-----------------------------
-# source: how we build the AMI For Nginx and GIT 
+# source: Nginx Frontend
 #-----------------------------
-
 source "amazon-ebs" "nginx-git" {
-    region = "eu-west-1"
-    instance_type = "t3.micro"
-    ssh_username = "ec2-user"
-    source_ami  = "ami-0870af38096a5355b"
-    ami_name = "nginx-git-by-packer-v2"
-    ami_virtualization_type  = "hvm"
+    region          = "eu-west-1"
+    instance_type   = "t3.micro"
+    ssh_username    = "ec2-user"
+    source_ami      = "ami-0870af38096a5355b"
+    # Added timestamp so builds never collide
+    ami_name        = "nginx-git-by-packer-${var.timestamp}"
+    ami_virtualization_type = "hvm"
 }
 
-
 #-----------------------------
-# source: how we build the AMI For Nginx and GIT 
+# source: Java/Python Backend
 #-----------------------------
-
 source "amazon-ebs" "java-git" {
-    region = "eu-west-1"
-    instance_type = "t3.micro"
-    ssh_username = "ec2-user"
-    source_ami  = "ami-0870af38096a5355b"
-    ami_name = "java-git-by-packer-v2"
-    ami_virtualization_type  = "hvm"
+    region          = "eu-west-1"
+    instance_type   = "t3.micro"
+    ssh_username    = "ec2-user"
+    source_ami      = "ami-0870af38096a5355b"
+    # Added timestamp
+    ami_name        = "java-git-by-packer-${var.timestamp}"
+    ami_virtualization_type = "hvm"
 }
 
-
 #------------------------------------
-# build: source + provisioning to do 
+# build: Nginx
 #------------------------------------
-
-build  {
-    name  = "nginx-git-ami-build"
-    sources = [
-        "source.amazon-ebs.nginx-git" 
-    ]
+build {
+    name    = "nginx-git-ami-build"
+    sources = ["source.amazon-ebs.nginx-git"]
 
     provisioner "shell" {
         inline = [
             "sudo yum update -y",
-            "sudo yum install nginx -y",
+            "sudo yum install nginx git -y",
             "sudo systemctl enable nginx",
-            "sudo systemctl start nginx",
-            "echo  '<h1> Hello from Techbleat - Built by Packer </h1>' | sudo tee /usr/share/nginx/html/index.html",
-            "sudo yum install git -y"
+            "echo '<h1> Hello from Techbleat - Built by Packer </h1>' | sudo tee /usr/share/nginx/html/index.html"
         ]
     }
-
-    post-processor "shell-local" {
-        inline = ["echo 'AMI build is finished For Nginx' "]
-    }
-
 }
 
-build  {
-    name  = "java-git-ami-build"
-    sources = [
-        "source.amazon-ebs.java-git"
-    ]
+#------------------------------------
+# build: Java & Python
+#------------------------------------
+build {
+    name    = "java-git-ami-build"
+    sources = ["source.amazon-ebs.java-git"]
 
     provisioner "shell" {
         inline = [
             "sudo yum update -y",
-            "sudo yum install java-17-amazon-corretto -y",
-            "sudo yum install git -y"
+            # Added Maven and Python3 to ensure the backend is ready to go
+            "sudo yum install java-17-amazon-corretto maven python3 git -y"
         ]
     }
-
-    post-processor "shell-local" {
-        inline = ["echo 'AMI build is finished For Java' "]
-    }
-
 }
-
-
-
